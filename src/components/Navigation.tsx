@@ -20,6 +20,16 @@ export default function Navigation() {
 
           <div className="flex space-x-4">
             <Link
+              href="/catalog"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                isActive('/catalog')
+                  ? 'bg-primary text-white'
+                  : 'text-text-secondary hover:text-primary'
+              }`}
+            >
+              Каталог
+            </Link>
+            <Link
               href="/stores"
               className={`px-3 py-2 rounded-lg transition-colors ${
                 isActive('/stores')
