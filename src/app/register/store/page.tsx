@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { updateStore, updateUser } from '@/lib/github'
+import { updateStore, updateUser, findUserByEmail } from '@/lib/github'
 import type { Store, User } from '@/lib/github'
 import dynamic from 'next/dynamic'
 
@@ -48,12 +48,22 @@ export default function StoreRegisterPage() {
 
     try {
       const formData = new FormData(e.currentTarget)
+      const email = formData.get('email') as string
+
+      // Проверяем, не существует ли уже пользователь с таким email
+      const existingUser = await findUserByEmail(email)
+      if (existingUser) {
+        toast.error('Пользователь с таким email уже существует')
+        setLoading(false)
+        return
+      }
+
       const userId = crypto.randomUUID()
       
       // Создаем пользователя
       const user: Omit<User, 'password'> & { password: string } = {
         id: userId,
-        email: formData.get('email') as string,
+        email,
         password: formData.get('password') as string,
         name: formData.get('name') as string,
         phone: formData.get('phone') as string,

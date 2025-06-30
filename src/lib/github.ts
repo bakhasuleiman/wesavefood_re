@@ -117,7 +117,7 @@ export async function updateUser(user: Omit<User, 'password'> & { password?: str
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   const users = await getUsers()
-  return users.find(u => u.email === email) || null
+  return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null
 }
 
 export async function getStores(): Promise<Store[]> {
@@ -170,6 +170,7 @@ export async function updateStore(store: Store): Promise<void> {
     }
 
     const content = Buffer.from(JSON.stringify(stores, null, 2)).toString('base64')
+    const sha = await getFileSha(`${DATA_PATH}/stores.json`)
     
     await octokit.repos.createOrUpdateFileContents({
       owner: REPO_OWNER,
@@ -177,7 +178,7 @@ export async function updateStore(store: Store): Promise<void> {
       path: `${DATA_PATH}/stores.json`,
       message: `Update store ${store.id}`,
       content,
-      sha: await getFileSha(`${DATA_PATH}/stores.json`),
+      sha,
     })
   } catch (error) {
     console.error('Error updating store:', error)
@@ -212,7 +213,7 @@ export async function updateProduct(product: Product): Promise<void> {
   }
 }
 
-async function getFileSha(path: string): Promise<string> {
+export async function getFileSha(path: string): Promise<string | undefined> {
   try {
     const response = await octokit.repos.getContent({
       owner: REPO_OWNER,
@@ -223,10 +224,10 @@ async function getFileSha(path: string): Promise<string> {
     if ('sha' in response.data) {
       return response.data.sha
     }
-    throw new Error('File not found')
+    return undefined
   } catch (error) {
     if ((error as any).status === 404) {
-      return ''
+      return undefined
     }
     throw error
   }
@@ -294,6 +295,31 @@ export async function updateReservation(reservation: Reservation): Promise<void>
     })
   } catch (error) {
     console.error('Error updating reservation:', error)
+    throw error
+  }
+}
+
+// Функция для инициализации JSON файлов, если они не существуют
+export async function initializeDataFiles(): Promise<void> {
+  try {
+    const files = ['users.json', 'stores.json', 'products.json', 'reservations.json']
+    
+    for (const file of files) {
+      const sha = await getFileSha(`${DATA_PATH}/${file}`)
+      
+      if (!sha) {
+        // Файл не существует, создаем его с пустым массивом
+        await octokit.repos.createOrUpdateFileContents({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: `${DATA_PATH}/${file}`,
+          message: `Initialize ${file}`,
+          content: Buffer.from('[]').toString('base64'),
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing data files:', error)
     throw error
   }
 } 
