@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest'
+import { hash } from '@/lib/crypto'
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -8,8 +9,19 @@ const REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'your-username'
 const REPO_NAME = process.env.GITHUB_REPO_NAME || 'wesavefood'
 const DATA_PATH = 'data'
 
+export interface User {
+  id: string
+  email: string
+  password: string // хешированный
+  name: string
+  phone: string
+  role: 'customer' | 'store'
+  createdAt: string
+}
+
 export interface Store {
   id: string
+  userId: string // связь с пользователем
   name: string
   address: string
   location: {
@@ -31,6 +43,72 @@ export interface Product {
   quantity: number
   image?: string
   status: 'available' | 'reserved' | 'sold'
+}
+
+export async function getUsers(): Promise<User[]> {
+  try {
+    const response = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/users.json`,
+    })
+
+    if ('content' in response.data) {
+      const content = Buffer.from(response.data.content, 'base64').toString()
+      return JSON.parse(content)
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    return []
+  }
+}
+
+export async function updateUser(user: Omit<User, 'password'> & { password?: string }): Promise<void> {
+  try {
+    const users = await getUsers()
+    const userIndex = users.findIndex(u => u.id === user.id)
+    
+    let updatedUser = user as User
+
+    if (userIndex === -1) {
+      // Новый пользователь
+      if (!user.password) {
+        throw new Error('Password is required for new users')
+      }
+      updatedUser.password = await hash(user.password)
+      updatedUser.createdAt = new Date().toISOString()
+      users.push(updatedUser)
+    } else {
+      // Обновление существующего пользователя
+      const existingUser = users[userIndex]
+      updatedUser = {
+        ...existingUser,
+        ...user,
+        password: user.password ? await hash(user.password) : existingUser.password,
+      }
+      users[userIndex] = updatedUser
+    }
+
+    const content = Buffer.from(JSON.stringify(users, null, 2)).toString('base64')
+    
+    await octokit.repos.createOrUpdateFileContents({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/users.json`,
+      message: `Update user ${user.id}`,
+      content,
+      sha: await getFileSha(`${DATA_PATH}/users.json`),
+    })
+  } catch (error) {
+    console.error('Error updating user:', error)
+    throw error
+  }
+}
+
+export async function findUserByEmail(email: string): Promise<User | null> {
+  const users = await getUsers()
+  return users.find(u => u.email === email) || null
 }
 
 export async function getStores(): Promise<Store[]> {
