@@ -45,6 +45,15 @@ export interface Product {
   status: 'available' | 'reserved' | 'sold'
 }
 
+export interface Reservation {
+  id: string
+  userId: string
+  productId: string
+  storeId: string
+  createdAt: string
+  status: 'active' | 'completed' | 'cancelled'
+}
+
 export async function getUsers(): Promise<User[]> {
   try {
     const response = await octokit.repos.getContent({
@@ -219,6 +228,72 @@ async function getFileSha(path: string): Promise<string> {
     if ((error as any).status === 404) {
       return ''
     }
+    throw error
+  }
+}
+
+export async function getUserById(userId: string): Promise<User | null> {
+  const users = await getUsers()
+  return users.find(u => u.id === userId) || null
+}
+
+export async function getStoreByUserId(userId: string): Promise<Store | null> {
+  const stores = await getStores()
+  return stores.find(s => s.userId === userId) || null
+}
+
+export async function getProductsByStoreId(storeId: string): Promise<Product[]> {
+  const products = await getProducts()
+  return products.filter(p => p.storeId === storeId)
+}
+
+export async function getReservations(): Promise<Reservation[]> {
+  try {
+    const response = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/reservations.json`,
+    })
+
+    if ('content' in response.data) {
+      const content = Buffer.from(response.data.content, 'base64').toString()
+      return JSON.parse(content)
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching reservations:', error)
+    return []
+  }
+}
+
+export async function getReservationsByUserId(userId: string): Promise<Reservation[]> {
+  const reservations = await getReservations()
+  return reservations.filter(r => r.userId === userId)
+}
+
+export async function updateReservation(reservation: Reservation): Promise<void> {
+  try {
+    const reservations = await getReservations()
+    const reservationIndex = reservations.findIndex(r => r.id === reservation.id)
+    
+    if (reservationIndex === -1) {
+      reservations.push(reservation)
+    } else {
+      reservations[reservationIndex] = reservation
+    }
+
+    const content = Buffer.from(JSON.stringify(reservations, null, 2)).toString('base64')
+    
+    await octokit.repos.createOrUpdateFileContents({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/reservations.json`,
+      message: `Update reservation ${reservation.id}`,
+      content,
+      sha: await getFileSha(`${DATA_PATH}/reservations.json`),
+    })
+  } catch (error) {
+    console.error('Error updating reservation:', error)
     throw error
   }
 } 
