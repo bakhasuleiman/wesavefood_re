@@ -1,20 +1,21 @@
+import { createHash } from 'crypto'
+
 /**
- * Хеширует пароль с использованием SHA-256
- * В реальном приложении следует использовать более безопасные методы, например bcrypt
+ * Хеширует пароль с помощью SHA-256
+ * @param password Пароль для хеширования
+ * @returns Хешированный пароль
  */
-export async function hash(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-  return hashHex
+export function hash(password: string): string {
+  return createHash('sha256').update(password).digest('hex')
 }
 
 /**
- * Проверяет соответствие пароля его хешу
+ * Проверяет соответствие пароля хешу
+ * @param password Пароль для проверки
+ * @param hashedPassword Хешированный пароль для сравнения
+ * @returns true если пароль соответствует хешу, false в противном случае
  */
-export async function verify(password: string, hash: string): Promise<boolean> {
-  const hashedPassword = await hash(password)
-  return hashedPassword === hash
+export function verify(password: string, hashedPassword: string): boolean {
+  const passwordHash = hash(password)
+  return passwordHash === hashedPassword
 } 
