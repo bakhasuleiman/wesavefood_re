@@ -45,6 +45,28 @@ export default function CustomerProfileClient({ user }: CustomerProfileClientPro
     }
   }
 
+  const handleBecomeStore = async () => {
+    setLoading(true)
+    try {
+      await updateUser({
+        id: user.id,
+        email: user.email,
+        name: formData.name,
+        phone: formData.phone,
+        role: 'store',
+        createdAt: user.createdAt,
+        photo_url: user.photo_url,
+      })
+      toast.success('Теперь вы — магазин! Заполните данные магазина.')
+      router.push('/register/store')
+    } catch (error: any) {
+      console.error('Error updating role:', error)
+      toast.error('Ошибка при смене роли: ' + (error?.message || ''))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <ProfileLayout user={user}>
       <div className="bg-white rounded-lg shadow-soft p-6">
@@ -122,6 +144,15 @@ export default function CustomerProfileClient({ user }: CustomerProfileClientPro
             <div>
               <div className="text-sm text-text-secondary">Роль</div>
               <div>{user.role === 'store' ? 'Магазин' : 'Покупатель'}</div>
+              {user.role !== 'store' && (
+                <button
+                  className="btn-primary mt-2"
+                  onClick={handleBecomeStore}
+                  disabled={loading}
+                >
+                  {loading ? 'Сохранение...' : 'Стать магазином'}
+                </button>
+              )}
             </div>
 
             <div>
