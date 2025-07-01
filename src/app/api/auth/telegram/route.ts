@@ -1,10 +1,13 @@
-// @ts-expect-error: Node.js API route, 'crypto' доступен на сервере
-import { createHash, createHmac } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getUsers, updateUser } from '@/lib/github'
 
 // Не забудьте добавить TELEGRAM_BOT_TOKEN в .env.local
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
+// @ts-ignore
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+
+if (!BOT_TOKEN) {
+  throw new Error('TELEGRAM_BOT_TOKEN environment variable is required')
+}
 
 function checkTelegramAuth(data: any): boolean {
   // https://core.telegram.org/widgets/login#checking-authorization
@@ -13,8 +16,12 @@ function checkTelegramAuth(data: any): boolean {
     .sort()
     .map(key => `${key}=${userData[key]}`)
     .join('\n')
-  const secret = createHash('sha256').update(BOT_TOKEN).digest()
-  const hmac = createHmac('sha256', secret).update(dataCheckString).digest('hex')
+  
+  // Используем any для crypto модулей
+  // @ts-ignore
+  const crypto = require('crypto')
+  const secret = crypto.createHash('sha256').update(BOT_TOKEN).digest()
+  const hmac = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex')
   return hmac === hash
 }
 
