@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import Script from 'next/script'
+import { Fragment } from 'react'
 
 interface User {
   id: string
@@ -12,11 +13,30 @@ interface User {
   role: 'customer' | 'store'
 }
 
+function Modal({ open, onClose, children }: { open: boolean, onClose: () => void, children: React.ReactNode }) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-lg p-6 relative min-w-[320px]">
+        <button
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
+          onClick={onClose}
+          aria-label="Закрыть"
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function Navigation() {
   const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [tgLoading, setTgLoading] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
     // Проверяем авторизацию при загрузке компонента
@@ -137,19 +157,31 @@ export default function Navigation() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-2">
-                    <div id="telegram-login-widget" />
-                    {tgLoading && <span className="text-xs text-gray-400 ml-2">Вход...</span>}
-                    <Script
-                      id="telegram-login-widget-script"
-                      strategy="afterInteractive"
-                      src="https://telegram.org/js/telegram-widget.js?22"
-                      data-telegram-login="wesavefood_login_bot"
-                      data-size="large"
-                      data-onauth="onTelegramAuth(user)"
-                      data-request-access="write"
-                    />
-                  </div>
+                  <>
+                    <button
+                      onClick={() => setModalOpen(true)}
+                      className="px-3 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
+                      disabled={tgLoading}
+                    >
+                      Войти через Telegram
+                    </button>
+                    <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
+                      <div className="flex flex-col items-center">
+                        <div id="telegram-login-widget-modal" />
+                        {tgLoading && <span className="text-xs text-gray-400 mt-2">Вход...</span>}
+                        <Script
+                          id="telegram-login-widget-script"
+                          strategy="afterInteractive"
+                          src="https://telegram.org/js/telegram-widget.js?22"
+                          data-telegram-login="wesavefood_login_bot"
+                          data-size="large"
+                          data-onauth="onTelegramAuth(user)"
+                          data-request-access="write"
+                          data-userpic="false"
+                        />
+                      </div>
+                    </Modal>
+                  </>
                 )}
               </>
             )}
