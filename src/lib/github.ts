@@ -82,10 +82,12 @@ export async function updateUser(user: Omit<User, 'password'> & { password?: str
 
     if (userIndex === -1) {
       // Новый пользователь
-      if (!user.password) {
-        throw new Error('Password is required for new users')
+      if (user.password) {
+        updatedUser.password = await hash(user.password)
+      } else {
+        // Для Telegram/соц.логина — пароль не требуется
+        updatedUser.password = ''
       }
-      updatedUser.password = await hash(user.password)
       updatedUser.createdAt = new Date().toISOString()
       users.push(updatedUser)
     } else {
