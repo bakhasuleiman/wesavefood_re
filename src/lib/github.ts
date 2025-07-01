@@ -10,9 +10,12 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 })
 
-const REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'your-username'
-const REPO_NAME = process.env.GITHUB_REPO_NAME || 'wesavefood'
+const REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'bakhasuleiman'
+const REPO_NAME = process.env.GITHUB_REPO_NAME || 'wsfdb'
 const DATA_PATH = 'data'
+
+console.log('REPO_OWNER:', process.env.GITHUB_REPO_OWNER);
+console.log('REPO_NAME:', process.env.GITHUB_REPO_NAME);
 
 export interface User {
   id: string
