@@ -585,4 +585,15 @@ async function gracefulShutdown() {
 }
 
 process.on('SIGINT', gracefulShutdown)
-process.on('SIGTERM', gracefulShutdown) 
+process.on('SIGTERM', gracefulShutdown)
+
+// --- Обновление резервации: кэш + GitHub ---
+export async function updateReservation(reservation: Reservation): Promise<void> {
+  try {
+    reservationCache[reservation.id] = reservation
+    await saveReservationToGitHub(reservation)
+  } catch (error) {
+    log('Ошибка updateReservation:', error)
+    throw error
+  }
+} 
