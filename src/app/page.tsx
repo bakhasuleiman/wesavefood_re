@@ -28,7 +28,7 @@ export default async function Home() {
 
         {/* Миссия */}
         <section className="flex flex-col items-center mb-16">
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-4xl w-full flex flex-col md:flex-row items-center">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl w-full flex flex-col md:flex-row items-center">
             <div className="flex-1">
               <h2 className="text-2xl font-bold mb-4">Наша миссия</h2>
               <p className="mb-4">
@@ -120,7 +120,7 @@ export default async function Home() {
               <div>Довольных покупателей</div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl mx-auto">
             <h3 className="text-xl font-bold mb-4">Присоединяйтесь к FoodSave!</h3>
             <p className="mb-6 text-text-secondary">
               Вместе мы сделаем Узбекистан примером осознанного потребления и борьбы с фуд-вейстом. Каждая покупка со скидкой — это шаг к более устойчивому будущему.
