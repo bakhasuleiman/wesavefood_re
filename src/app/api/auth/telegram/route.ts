@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       phone: '',
       role: role as 'customer' | 'store',
       createdAt: new Date().toISOString(),
+      photo_url: data.photo_url || '',
     }
     await updateUser(user)
   }

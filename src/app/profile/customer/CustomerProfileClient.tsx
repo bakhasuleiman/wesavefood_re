@@ -98,6 +98,11 @@ export default function CustomerProfileClient({ user }: CustomerProfileClientPro
           </form>
         ) : (
           <div className="space-y-4">
+            {user.photo_url && (
+              <div className="flex justify-center mb-4">
+                <img src={user.photo_url} alt="Аватарка Telegram" className="w-24 h-24 rounded-full object-cover border" />
+              </div>
+            )}
             <div>
               <div className="text-sm text-text-secondary">Имя</div>
               <div>{user.name}</div>

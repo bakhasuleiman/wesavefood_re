@@ -17,6 +17,7 @@ export interface User {
   phone: string
   role: 'customer' | 'store'
   createdAt: string
+  photo_url?: string // аватарка Telegram
 }
 
 export interface Store {
