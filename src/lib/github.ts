@@ -220,7 +220,6 @@ export async function updateUser(user: Omit<User, 'password'> & { password?: str
       updatedUser = {
         ...existingUser,
         ...user,
-        role: existingUser.role,
         password: user.password ? await hash(user.password) : existingUser.password,
       }
     }
