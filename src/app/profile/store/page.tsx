@@ -1,25 +1,23 @@
-import { getUserById, getStoreByUserId } from '@/lib/github'
+import { requireRole } from '@/lib/auth'
+import { getStoreByUserId } from '@/lib/github'
 import StoreProfileClient from './StoreProfileClient'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 export default async function StoreProfilePage() {
-  const cookieStore = cookies()
-  const userId = cookieStore.get('userId')?.value
-
-  if (!userId) {
-    redirect('/login')
-  }
-
-  const user = await getUserById(userId)
-  if (!user || user.role !== 'store') {
-    redirect('/login')
-  }
-
-  const store = await getStoreByUserId(userId)
+  const user = await requireRole('store')
+  const store = await getStoreByUserId(user.id)
+  
   if (!store) {
-    redirect('/login')
+    // Если у пользователя нет магазина, перенаправляем на регистрацию магазина
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-4">Магазин не найден</h1>
+        <p className="mb-4">Для доступа к профилю магазина необходимо зарегистрировать магазин.</p>
+        <a href="/register/store" className="btn-primary">
+          Зарегистрировать магазин
+        </a>
+      </div>
+    )
   }
-
+  
   return <StoreProfileClient user={user} store={store} />
 } 

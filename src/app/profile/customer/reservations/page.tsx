@@ -1,22 +1,10 @@
-import { getUserById, getReservationsByUserId } from '@/lib/github'
+import { requireRole } from '@/lib/auth'
+import { getReservationsByUserId } from '@/lib/github'
 import CustomerReservationsClient from './CustomerReservationsClient'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 export default async function CustomerReservationsPage() {
-  const cookieStore = cookies()
-  const userId = cookieStore.get('userId')?.value
-
-  if (!userId) {
-    redirect('/login')
-  }
-
-  const user = await getUserById(userId)
-  if (!user || user.role !== 'customer') {
-    redirect('/login')
-  }
-
-  const reservations = await getReservationsByUserId(userId)
-
+  const user = await requireRole('customer')
+  const reservations = await getReservationsByUserId(user.id)
+  
   return <CustomerReservationsClient user={user} reservations={reservations} />
 } 

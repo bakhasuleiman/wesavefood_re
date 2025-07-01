@@ -1,20 +1,8 @@
-import { getUserById } from '@/lib/github'
+import { requireRole } from '@/lib/auth'
 import CustomerProfileClient from './CustomerProfileClient'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 export default async function CustomerProfilePage() {
-  const cookieStore = cookies()
-  const userId = cookieStore.get('userId')?.value
-
-  if (!userId) {
-    redirect('/login')
-  }
-
-  const user = await getUserById(userId)
-  if (!user) {
-    redirect('/login')
-  }
-
+  const user = await requireRole('customer')
+  
   return <CustomerProfileClient user={user} />
 } 

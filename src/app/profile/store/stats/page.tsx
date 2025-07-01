@@ -1,28 +1,25 @@
-import { getUserById, getStoreByUserId, getReservations } from '@/lib/github'
+import { requireRole } from '@/lib/auth'
+import { getStoreByUserId, getReservations } from '@/lib/github'
 import StoreStatsClient from './StoreStatsClient'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 
 export default async function StoreStatsPage() {
-  const cookieStore = cookies()
-  const userId = cookieStore.get('userId')?.value
-
-  if (!userId) {
-    redirect('/login')
-  }
-
-  const user = await getUserById(userId)
-  if (!user || user.role !== 'store') {
-    redirect('/login')
-  }
-
-  const store = await getStoreByUserId(userId)
+  const user = await requireRole('store')
+  const store = await getStoreByUserId(user.id)
+  
   if (!store) {
-    redirect('/login')
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-4">Магазин не найден</h1>
+        <p className="mb-4">Для доступа к статистике необходимо зарегистрировать магазин.</p>
+        <a href="/register/store" className="btn-primary">
+          Зарегистрировать магазин
+        </a>
+      </div>
+    )
   }
-
+  
   const allReservations = await getReservations()
   const reservations = allReservations.filter(r => r.storeId === store.id)
-
+  
   return <StoreStatsClient user={user} store={store} reservations={reservations} />
 } 

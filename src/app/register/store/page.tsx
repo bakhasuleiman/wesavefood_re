@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { updateStore, updateUser, findUserByEmail } from '@/lib/github'
 import type { Store, User } from '@/lib/github'
 import dynamic from 'next/dynamic'
+import Script from 'next/script'
 
 const Map = dynamic(() => import('@/components/Map'), {
   ssr: false,
@@ -96,149 +97,48 @@ export default function StoreRegisterPage() {
     }
   }
 
+  // Функция для обработки авторизации через Telegram
+  const onTelegramAuth = useCallback(async (user: any) => {
+    try {
+      const res = await fetch('/api/auth/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
+      })
+      if (res.ok) {
+        toast.success('Вы успешно вошли через Telegram!')
+        router.push('/profile/store')
+      } else {
+        const data = await res.json()
+        toast.error(data.message || 'Ошибка авторизации через Telegram')
+      }
+    } catch (e) {
+      toast.error('Ошибка соединения с сервером')
+    }
+  }, [router])
+
+  // Глобально объявляем функцию для Telegram Widget только на клиенте
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).onTelegramAuth = onTelegramAuth
+    }
+  }, [onTelegramAuth])
+
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-8">Регистрация магазина</h1>
-
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              className="input"
-              placeholder="example@mail.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2">
-              Пароль
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              className="input"
-              placeholder="••••••••"
-              minLength={8}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium mb-2">
-            Ваше имя
-          </label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            required
-            className="input"
-            placeholder="Введите ваше имя"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="storeName" className="block text-sm font-medium mb-2">
-            Название магазина
-          </label>
-          <input
-            type="text"
-            id="storeName"
-            name="storeName"
-            required
-            className="input"
-            placeholder="Введите название магазина"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="address" className="block text-sm font-medium mb-2">
-            Адрес
-          </label>
-          <input
-            type="text"
-            id="address"
-            name="address"
-            required
-            className="input"
-            placeholder="Введите адрес магазина"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Местоположение
-          </label>
-          <div className="mb-2">
-            <button
-              type="button"
-              onClick={handleGetLocation}
-              className="btn-secondary w-full"
-            >
-              Определить мое местоположение
-            </button>
-          </div>
-          <div className="h-[300px] rounded-lg overflow-hidden">
-            <Map
-              stores={[
-                {
-                  id: 'new',
-                  userId: '',
-                  name: 'Ваш магазин',
-                  address: '',
-                  location,
-                  description: '',
-                  phone: '',
-                },
-              ]}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium mb-2">
-            Описание
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            required
-            className="input min-h-[100px]"
-            placeholder="Расскажите о вашем магазине"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium mb-2">
-            Телефон
-          </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            required
-            className="input"
-            placeholder="+998 90 123 45 67"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="btn-primary w-full"
-          disabled={loading}
-        >
-          {loading ? 'Регистрация...' : 'Зарегистрировать магазин'}
-        </button>
-      </form>
+      <h1 className="text-2xl font-bold mb-8 text-center">Вход/регистрация через Telegram</h1>
+      <div className="flex justify-center">
+        <div id="telegram-login-widget" />
+      </div>
+      <Script
+        id="telegram-login-widget-script"
+        strategy="afterInteractive"
+        src="https://telegram.org/js/telegram-widget.js?22"
+        data-telegram-login="wesavefood_login_bot"
+        data-size="large"
+        data-onauth="onTelegramAuth(user)"
+        data-request-access="write"
+      />
     </main>
   )
 } 
