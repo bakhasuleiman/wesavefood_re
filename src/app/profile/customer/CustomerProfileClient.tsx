@@ -26,16 +26,19 @@ export default function CustomerProfileClient({ user }: CustomerProfileClientPro
 
     try {
       await updateUser({
-        ...user,
-        ...formData,
+        id: user.id,
+        email: user.email,
+        name: formData.name,
+        phone: formData.phone,
+        role: user.role,
+        createdAt: user.createdAt,
       })
-      
       toast.success('Профиль успешно обновлен!')
       setEditMode(false)
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error)
-      toast.error('Ошибка при обновлении профиля')
+      toast.error('Ошибка при обновлении профиля: ' + (error?.message || ''))
     } finally {
       setLoading(false)
     }
@@ -108,6 +111,11 @@ export default function CustomerProfileClient({ user }: CustomerProfileClientPro
             <div>
               <div className="text-sm text-text-secondary">Телефон</div>
               <div>{user.phone}</div>
+            </div>
+
+            <div>
+              <div className="text-sm text-text-secondary">Роль</div>
+              <div>{user.role === 'store' ? 'Магазин' : 'Покупатель'}</div>
             </div>
 
             <div>

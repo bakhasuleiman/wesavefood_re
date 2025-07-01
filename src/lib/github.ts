@@ -96,6 +96,7 @@ export async function updateUser(user: Omit<User, 'password'> & { password?: str
       updatedUser = {
         ...existingUser,
         ...user,
+        role: existingUser.role, // всегда сохраняем исходную роль
         password: user.password ? await hash(user.password) : existingUser.password,
       }
       users[userIndex] = updatedUser
