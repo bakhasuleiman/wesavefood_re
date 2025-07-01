@@ -14,12 +14,17 @@ interface User {
 }
 
 function Modal({ open, onClose, children }: { open: boolean, onClose: () => void, children: React.ReactNode }) {
-  if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-lg p-6 relative min-w-[320px]">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-colors duration-200 ${open ? 'bg-black bg-opacity-40 visible' : 'bg-transparent invisible'}`}
+      style={{ pointerEvents: open ? 'auto' : 'none' }}
+    >
+      <div
+        className={`bg-white rounded-2xl shadow-2xl p-8 relative min-w-[340px] max-w-full w-full max-w-sm transition-all duration-300 ${open ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+      >
         <button
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl focus:outline-none"
           onClick={onClose}
           aria-label="Закрыть"
         >
@@ -184,9 +189,17 @@ export default function Navigation() {
                       Войти через Telegram
                     </button>
                     <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
-                      <div className="flex flex-col items-center">
+                      <div className="flex flex-col items-center min-h-[120px] justify-center">
                         <div ref={modalRef} />
-                        {tgLoading && <span className="text-xs text-gray-400 mt-2">Вход...</span>}
+                        {tgLoading && (
+                          <div className="flex flex-col items-center mt-4">
+                            <svg className="animate-spin h-8 w-8 text-primary mb-2" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                            </svg>
+                            <span className="text-xs text-gray-500">Вход через Telegram...</span>
+                          </div>
+                        )}
                       </div>
                     </Modal>
                   </>
