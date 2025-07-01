@@ -1,5 +1,11 @@
 import { Octokit } from '@octokit/rest'
 import { hash } from '@/lib/crypto'
+import { Buffer } from 'buffer'
+// @ts-ignore
+// eslint-disable-next-line
+// @ts-expect-error
+// Для корректной работы process и Buffer в среде Node.js
+// Если потребуется, установить типы: npm i --save-dev @types/node
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -55,6 +61,57 @@ export interface Reservation {
   status: 'active' | 'completed' | 'cancelled'
 }
 
+// --- Кэш в памяти ---
+const userCache: Record<string, User> = {}
+
+// --- Кэш магазинов ---
+const storeCache: Record<string, Store> = {}
+
+// --- Кэш товаров ---
+const productCache: Record<string, Product> = {}
+
+// --- Кэш резерваций ---
+const reservationCache: Record<string, Reservation> = {}
+
+// --- Логирование ---
+function log(...args: any[]) {
+  console.log('[GITHUB-DB]', ...args)
+}
+
+// --- Загрузка всех пользователей из GitHub при запуске ---
+export async function loadAllUsersFromGitHub() {
+  log('Загрузка всех пользователей из GitHub...')
+  try {
+    // Получаем список файлов в data/users/
+    const { data: files } = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/users`,
+    })
+    for (const file of files) {
+      if (file.type === 'file' && file.name.endsWith('.json')) {
+        const { data: fileData } = await octokit.repos.getContent({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: file.path,
+        })
+        if ('content' in fileData) {
+          const content = Buffer.from(fileData.content, 'base64').toString()
+          const user: User = JSON.parse(content)
+          userCache[user.id] = user
+          log(`Пользователь ${user.id} загружен из ${file.name}`)
+        }
+      }
+    }
+    log('Все пользователи успешно загружены.')
+  } catch (error) {
+    log('Ошибка при загрузке пользователей:', error)
+  }
+}
+
+// --- Вызов загрузки при старте ---
+loadAllUsersFromGitHub()
+
 export async function getUsers(): Promise<User[]> {
   try {
     const response = await octokit.repos.getContent({
@@ -74,47 +131,58 @@ export async function getUsers(): Promise<User[]> {
   }
 }
 
+// --- Асинхронное сохранение пользователя в GitHub ---
+export async function saveUserToGitHub(user: User) {
+  const path = `${DATA_PATH}/users/${user.id}/profile.json`
+  const content = Buffer.from(JSON.stringify(user, null, 2)).toString('base64')
+  let sha: string | undefined
+  try {
+    sha = await getFileSha(path)
+  } catch (e) {
+    log('SHA не найден для', path)
+  }
+  try {
+    await octokit.repos.createOrUpdateFileContents({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path,
+      message: `Update user ${user.id}`,
+      content,
+      sha,
+    })
+    log(`Пользователь ${user.id} сохранён в ${path}`)
+  } catch (error) {
+    log('Ошибка при сохранении пользователя:', error)
+    throw error
+  }
+}
+
+// --- Обновление пользователя: кэш + GitHub ---
 export async function updateUser(user: Omit<User, 'password'> & { password?: string }): Promise<void> {
   try {
-    const users = await getUsers()
+    const users = Object.values(userCache)
     const userIndex = users.findIndex(u => u.id === user.id)
-    
     let updatedUser = user as User
-
     if (userIndex === -1) {
-      // Новый пользователь
       if (user.password) {
         updatedUser.password = await hash(user.password)
       } else {
-        // Для Telegram/соц.логина — пароль не требуется
         updatedUser.password = ''
       }
       updatedUser.createdAt = new Date().toISOString()
-      users.push(updatedUser)
     } else {
-      // Обновление существующего пользователя
       const existingUser = users[userIndex]
       updatedUser = {
         ...existingUser,
         ...user,
-        role: existingUser.role, // всегда сохраняем исходную роль
+        role: existingUser.role,
         password: user.password ? await hash(user.password) : existingUser.password,
       }
-      users[userIndex] = updatedUser
     }
-
-    const content = Buffer.from(JSON.stringify(users, null, 2)).toString('base64')
-    
-    await octokit.repos.createOrUpdateFileContents({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/users.json`,
-      message: `Update user ${user.id}`,
-      content,
-      sha: await getFileSha(`${DATA_PATH}/users.json`),
-    })
+    userCache[updatedUser.id] = updatedUser
+    await saveUserToGitHub(updatedUser)
   } catch (error) {
-    console.error('Error updating user:', error)
+    log('Ошибка updateUser:', error)
     throw error
   }
 }
@@ -162,57 +230,71 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
-export async function updateStore(store: Store): Promise<void> {
+// --- Загрузка всех магазинов из GitHub при запуске ---
+export async function loadAllStoresFromGitHub() {
+  log('Загрузка всех магазинов из GitHub...')
   try {
-    const stores = await getStores()
-    const storeIndex = stores.findIndex(s => s.id === store.id)
-    
-    if (storeIndex === -1) {
-      stores.push(store)
-    } else {
-      stores[storeIndex] = store
+    const { data: files } = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/stores`,
+    })
+    for (const file of files) {
+      if (file.type === 'file' && file.name.endsWith('.json')) {
+        const { data: fileData } = await octokit.repos.getContent({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: file.path,
+        })
+        if ('content' in fileData) {
+          const content = Buffer.from(fileData.content, 'base64').toString()
+          const store: Store = JSON.parse(content)
+          storeCache[store.id] = store
+          log(`Магазин ${store.id} загружен из ${file.name}`)
+        }
+      }
     }
+    log('Все магазины успешно загружены.')
+  } catch (error) {
+    log('Ошибка при загрузке магазинов:', error)
+  }
+}
 
-    const content = Buffer.from(JSON.stringify(stores, null, 2)).toString('base64')
-    const sha = await getFileSha(`${DATA_PATH}/stores.json`)
-    
+loadAllStoresFromGitHub()
+
+// --- Асинхронное сохранение магазина в GitHub ---
+export async function saveStoreToGitHub(store: Store) {
+  const path = `${DATA_PATH}/stores/${store.id}/profile.json`
+  const content = Buffer.from(JSON.stringify(store, null, 2)).toString('base64')
+  let sha: string | undefined
+  try {
+    sha = await getFileSha(path)
+  } catch (e) {
+    log('SHA не найден для', path)
+  }
+  try {
     await octokit.repos.createOrUpdateFileContents({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      path: `${DATA_PATH}/stores.json`,
+      path,
       message: `Update store ${store.id}`,
       content,
       sha,
     })
+    log(`Магазин ${store.id} сохранён в ${path}`)
   } catch (error) {
-    console.error('Error updating store:', error)
+    log('Ошибка при сохранении магазина:', error)
     throw error
   }
 }
 
-export async function updateProduct(product: Product): Promise<void> {
+// --- Обновление магазина: кэш + GitHub ---
+export async function updateStore(store: Store): Promise<void> {
   try {
-    const products = await getProducts()
-    const productIndex = products.findIndex(p => p.id === product.id)
-    
-    if (productIndex === -1) {
-      products.push(product)
-    } else {
-      products[productIndex] = product
-    }
-
-    const content = Buffer.from(JSON.stringify(products, null, 2)).toString('base64')
-    
-    await octokit.repos.createOrUpdateFileContents({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/products.json`,
-      message: `Update product ${product.id}`,
-      content,
-      sha: await getFileSha(`${DATA_PATH}/products.json`),
-    })
+    storeCache[store.id] = store
+    await saveStoreToGitHub(store)
   } catch (error) {
-    console.error('Error updating product:', error)
+    log('Ошибка updateStore:', error)
     throw error
   }
 }
@@ -326,4 +408,238 @@ export async function initializeDataFiles(): Promise<void> {
     console.error('Error initializing data files:', error)
     throw error
   }
-} 
+}
+
+// --- Автосохранение всех пользователей из кэша в GitHub ---
+async function autoSaveAllUsers() {
+  log('Автосохранение всех пользователей...')
+  const users = Object.values(userCache)
+  for (const user of users) {
+    try {
+      await saveUserToGitHub(user)
+    } catch (e) {
+      log('Ошибка автосохранения пользователя', user.id, e)
+    }
+  }
+  log('Автосохранение завершено.')
+}
+
+setInterval(autoSaveAllUsers, 5 * 60 * 1000) // каждые 5 минут
+
+// --- Автосохранение всех магазинов из кэша в GitHub ---
+async function autoSaveAllStores() {
+  log('Автосохранение всех магазинов...')
+  const stores = Object.values(storeCache)
+  for (const store of stores) {
+    try {
+      await saveStoreToGitHub(store)
+    } catch (e) {
+      log('Ошибка автосохранения магазина', store.id, e)
+    }
+  }
+  log('Автосохранение магазинов завершено.')
+}
+
+setInterval(autoSaveAllStores, 5 * 60 * 1000)
+
+// --- Сохранение при завершении работы сервера ---
+async function gracefulShutdown() {
+  log('Завершение работы сервера. Сохраняю все данные...')
+  await autoSaveAllUsers()
+  await autoSaveAllStores()
+  log('Все данные сохранены. Завершение.')
+  process.exit(0)
+}
+
+process.on('SIGINT', gracefulShutdown)
+process.on('SIGTERM', gracefulShutdown)
+
+// --- Загрузка всех товаров из GitHub при запуске ---
+export async function loadAllProductsFromGitHub() {
+  log('Загрузка всех товаров из GitHub...')
+  try {
+    const { data: files } = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/products`,
+    })
+    for (const file of files) {
+      if (file.type === 'file' && file.name.endsWith('.json')) {
+        const { data: fileData } = await octokit.repos.getContent({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: file.path,
+        })
+        if ('content' in fileData) {
+          const content = Buffer.from(fileData.content, 'base64').toString()
+          const product: Product = JSON.parse(content)
+          productCache[product.id] = product
+          log(`Товар ${product.id} загружен из ${file.name}`)
+        }
+      }
+    }
+    log('Все товары успешно загружены.')
+  } catch (error) {
+    log('Ошибка при загрузке товаров:', error)
+  }
+}
+
+loadAllProductsFromGitHub()
+
+// --- Асинхронное сохранение товара в GitHub ---
+export async function saveProductToGitHub(product: Product) {
+  const path = `${DATA_PATH}/products/${product.id}/product.json`
+  const content = Buffer.from(JSON.stringify(product, null, 2)).toString('base64')
+  let sha: string | undefined
+  try {
+    sha = await getFileSha(path)
+  } catch (e) {
+    log('SHA не найден для', path)
+  }
+  try {
+    await octokit.repos.createOrUpdateFileContents({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path,
+      message: `Update product ${product.id}`,
+      content,
+      sha,
+    })
+    log(`Товар ${product.id} сохранён в ${path}`)
+  } catch (error) {
+    log('Ошибка при сохранении товара:', error)
+    throw error
+  }
+}
+
+// --- Обновление товара: кэш + GitHub ---
+export async function updateProduct(product: Product): Promise<void> {
+  try {
+    productCache[product.id] = product
+    await saveProductToGitHub(product)
+  } catch (error) {
+    log('Ошибка updateProduct:', error)
+    throw error
+  }
+}
+
+// --- Автосохранение всех товаров из кэша в GitHub ---
+async function autoSaveAllProducts() {
+  log('Автосохранение всех товаров...')
+  const products = Object.values(productCache)
+  for (const product of products) {
+    try {
+      await saveProductToGitHub(product)
+    } catch (e) {
+      log('Ошибка автосохранения товара', product.id, e)
+    }
+  }
+  log('Автосохранение товаров завершено.')
+}
+
+setInterval(autoSaveAllProducts, 5 * 60 * 1000)
+
+// --- Сохранение товаров при завершении работы сервера ---
+async function gracefulShutdownProducts() {
+  log('Завершение работы сервера. Сохраняю все товары...')
+  await autoSaveAllProducts()
+  log('Все товары сохранены.')
+}
+
+process.on('SIGINT', gracefulShutdownProducts)
+process.on('SIGTERM', gracefulShutdownProducts)
+
+// --- Загрузка всех резерваций из GitHub при запуске ---
+export async function loadAllReservationsFromGitHub() {
+  log('Загрузка всех резерваций из GitHub...')
+  try {
+    const { data: files } = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/reservations`,
+    })
+    for (const file of files) {
+      if (file.type === 'file' && file.name.endsWith('.json')) {
+        const { data: fileData } = await octokit.repos.getContent({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: file.path,
+        })
+        if ('content' in fileData) {
+          const content = Buffer.from(fileData.content, 'base64').toString()
+          const reservation: Reservation = JSON.parse(content)
+          reservationCache[reservation.id] = reservation
+          log(`Резервация ${reservation.id} загружена из ${file.name}`)
+        }
+      }
+    }
+    log('Все резервации успешно загружены.')
+  } catch (error) {
+    log('Ошибка при загрузке резерваций:', error)
+  }
+}
+
+loadAllReservationsFromGitHub()
+
+// --- Асинхронное сохранение резервации в GitHub ---
+export async function saveReservationToGitHub(reservation: Reservation) {
+  const path = `${DATA_PATH}/reservations/${reservation.id}/reservation.json`
+  const content = Buffer.from(JSON.stringify(reservation, null, 2)).toString('base64')
+  let sha: string | undefined
+  try {
+    sha = await getFileSha(path)
+  } catch (e) {
+    log('SHA не найден для', path)
+  }
+  try {
+    await octokit.repos.createOrUpdateFileContents({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path,
+      message: `Update reservation ${reservation.id}`,
+      content,
+      sha,
+    })
+    log(`Резервация ${reservation.id} сохранена в ${path}`)
+  } catch (error) {
+    log('Ошибка при сохранении резервации:', error)
+    throw error
+  }
+}
+
+// --- Обновление резервации: кэш + GitHub ---
+export async function updateReservation(reservation: Reservation): Promise<void> {
+  try {
+    reservationCache[reservation.id] = reservation
+    await saveReservationToGitHub(reservation)
+  } catch (error) {
+    log('Ошибка updateReservation:', error)
+    throw error
+  }
+}
+
+// --- Автосохранение всех резерваций из кэша в GitHub ---
+async function autoSaveAllReservations() {
+  log('Автосохранение всех резерваций...')
+  const reservations = Object.values(reservationCache)
+  for (const reservation of reservations) {
+    try {
+      await saveReservationToGitHub(reservation)
+    } catch (e) {
+      log('Ошибка автосохранения резервации', reservation.id, e)
+    }
+  }
+  log('Автосохранение резерваций завершено.')
+}
+
+setInterval(autoSaveAllReservations, 5 * 60 * 1000)
+
+// --- Сохранение резерваций при завершении работы сервера ---
+async function gracefulShutdownReservations() {
+  log('Завершение работы сервера. Сохраняю все резервации...')
+  await autoSaveAllReservations()
+  log('Все резервации сохранены.')
+}
+
+process.on('SIGINT', gracefulShutdownReservations)
+process.on('SIGTERM', gracefulShutdownReservations) 

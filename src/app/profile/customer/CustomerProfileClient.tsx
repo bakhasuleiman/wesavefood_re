@@ -32,6 +32,7 @@ export default function CustomerProfileClient({ user }: CustomerProfileClientPro
         phone: formData.phone,
         role: user.role,
         createdAt: user.createdAt,
+        photo_url: user.photo_url,
       })
       toast.success('Профиль успешно обновлен!')
       setEditMode(false)
