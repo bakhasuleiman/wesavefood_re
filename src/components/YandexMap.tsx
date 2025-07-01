@@ -1,13 +1,19 @@
 'use client'
 import { useEffect, useRef } from 'react'
 
+interface YandexMapStore {
+  location: [number, number]
+  name: string
+  address: string
+}
+
 interface YandexMapProps {
   center?: [number, number]
   zoom?: number
-  markers?: [number, number][]
+  stores?: YandexMapStore[]
 }
 
-export default function YandexMap({ center = [69.2797, 41.3112], zoom = 12, markers = [] }: YandexMapProps) {
+export default function YandexMap({ center = [69.2797, 41.3112], zoom = 12, stores = [] }: YandexMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -28,13 +34,16 @@ export default function YandexMap({ center = [69.2797, 41.3112], zoom = 12, mark
           center,
           zoom,
         })
-        markers.forEach((marker) => {
-          map.geoObjects.add(new (window as any).ymaps.Placemark(marker))
+        stores.forEach((store) => {
+          const placemark = new (window as any).ymaps.Placemark(store.location, {
+            balloonContent: `<strong>${store.name}</strong><br/>${store.address}`
+          })
+          map.geoObjects.add(placemark)
         })
       })
     }
     // eslint-disable-next-line
-  }, [center, zoom, markers])
+  }, [center, zoom, stores])
 
   return <div ref={mapRef} style={{ width: '100%', height: 400 }} />
 } 
