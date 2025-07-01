@@ -81,7 +81,6 @@ function log(...args: any[]) {
 export async function loadAllUsersFromGitHub() {
   log('Загрузка всех пользователей из GitHub...')
   try {
-    // Получаем список файлов в data/users/
     const { data: files } = await octokit.repos.getContent({
       owner: REPO_OWNER,
       repo: REPO_NAME,
@@ -105,8 +104,12 @@ export async function loadAllUsersFromGitHub() {
       }
     }
     log('Все пользователи успешно загружены.')
-  } catch (error) {
-    log('Ошибка при загрузке пользователей:', error)
+  } catch (error: any) {
+    if (error.status === 404) {
+      log('Папка пользователей ещё не создана — это нормально для пустой базы.')
+    } else {
+      log('Ошибка при загрузке пользователей:', error)
+    }
   }
 }
 
@@ -115,25 +118,63 @@ loadAllUsersFromGitHub()
 
 export async function getUsers(): Promise<User[]> {
   try {
-    const response = await octokit.repos.getContent({
+    const { data: files } = await octokit.repos.getContent({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      path: `${DATA_PATH}/users.json`,
-    })
-
-    if ('content' in response.data) {
-      const content = Buffer.from(response.data.content, 'base64').toString()
-      return JSON.parse(content)
+      path: `${DATA_PATH}/users`,
+    });
+    if (Array.isArray(files)) {
+      const users: User[] = [];
+      for (const dir of files) {
+        if (dir.type === 'dir') {
+          try {
+            const { data: profileFile } = await octokit.repos.getContent({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: `${DATA_PATH}/users/${dir.name}/profile.json`,
+            });
+            if ('content' in profileFile) {
+              const content = Buffer.from(profileFile.content, 'base64').toString();
+              users.push(JSON.parse(content));
+            }
+          } catch (e) {
+            // profile.json может отсутствовать — пропускаем
+          }
+        }
+      }
+      return users;
     }
-    return []
+    return [];
   } catch (error) {
-    console.error('Error fetching users:', error)
-    return []
+    console.error('Error fetching users:', error);
+    return [];
   }
 }
 
 // --- Асинхронное сохранение пользователя в GitHub ---
 export async function saveUserToGitHub(user: User) {
+  // Проверяем, существует ли папка data/users
+  try {
+    await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `${DATA_PATH}/users`,
+    })
+  } catch (error: any) {
+    if (error.status === 404) {
+      // Папки нет — создаём через .gitkeep
+      await octokit.repos.createOrUpdateFileContents({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        path: `${DATA_PATH}/users/.gitkeep`,
+        message: 'init users folder',
+        content: Buffer.from('').toString('base64'),
+      })
+    } else {
+      throw error
+    }
+  }
+  // Далее стандартное сохранение профиля
   const path = `${DATA_PATH}/users/${user.id}/profile.json`
   const content = Buffer.from(JSON.stringify(user, null, 2)).toString('base64')
   let sha: string | undefined
@@ -195,39 +236,71 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 
 export async function getStores(): Promise<Store[]> {
   try {
-    const response = await octokit.repos.getContent({
+    const { data: files } = await octokit.repos.getContent({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      path: `${DATA_PATH}/stores.json`,
-    })
-
-    if ('content' in response.data) {
-      const content = Buffer.from(response.data.content, 'base64').toString()
-      return JSON.parse(content)
+      path: `${DATA_PATH}/stores`,
+    });
+    if (Array.isArray(files)) {
+      const stores: Store[] = [];
+      for (const dir of files) {
+        if (dir.type === 'dir') {
+          try {
+            const { data: profileFile } = await octokit.repos.getContent({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: `${DATA_PATH}/stores/${dir.name}/profile.json`,
+            });
+            if ('content' in profileFile) {
+              const content = Buffer.from(profileFile.content, 'base64').toString();
+              stores.push(JSON.parse(content));
+            }
+          } catch (e) {
+            // profile.json может отсутствовать — пропускаем
+          }
+        }
+      }
+      return stores;
     }
-    return []
+    return [];
   } catch (error) {
-    console.error('Error fetching stores:', error)
-    return []
+    console.error('Error fetching stores:', error);
+    return [];
   }
 }
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const response = await octokit.repos.getContent({
+    const { data: files } = await octokit.repos.getContent({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      path: `${DATA_PATH}/products.json`,
-    })
-
-    if ('content' in response.data) {
-      const content = Buffer.from(response.data.content, 'base64').toString()
-      return JSON.parse(content)
+      path: `${DATA_PATH}/products`,
+    });
+    if (Array.isArray(files)) {
+      const products: Product[] = [];
+      for (const dir of files) {
+        if (dir.type === 'dir') {
+          try {
+            const { data: productFile } = await octokit.repos.getContent({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: `${DATA_PATH}/products/${dir.name}/product.json`,
+            });
+            if ('content' in productFile) {
+              const content = Buffer.from(productFile.content, 'base64').toString();
+              products.push(JSON.parse(content));
+            }
+          } catch (e) {
+            // product.json может отсутствовать — пропускаем
+          }
+        }
+      }
+      return products;
     }
-    return []
+    return [];
   } catch (error) {
-    console.error('Error fetching products:', error)
-    return []
+    console.error('Error fetching products:', error);
+    return [];
   }
 }
 
@@ -258,8 +331,12 @@ export async function loadAllStoresFromGitHub() {
       }
     }
     log('Все магазины успешно загружены.')
-  } catch (error) {
-    log('Ошибка при загрузке магазинов:', error)
+  } catch (error: any) {
+    if (error.status === 404) {
+      log('Папка магазинов ещё не создана — это нормально для пустой базы.')
+    } else {
+      log('Ошибка при загрузке магазинов:', error)
+    }
   }
 }
 
@@ -339,20 +416,36 @@ export async function getProductsByStoreId(storeId: string): Promise<Product[]> 
 
 export async function getReservations(): Promise<Reservation[]> {
   try {
-    const response = await octokit.repos.getContent({
+    const { data: files } = await octokit.repos.getContent({
       owner: REPO_OWNER,
       repo: REPO_NAME,
-      path: `${DATA_PATH}/reservations.json`,
-    })
-
-    if ('content' in response.data) {
-      const content = Buffer.from(response.data.content, 'base64').toString()
-      return JSON.parse(content)
+      path: `${DATA_PATH}/reservations`,
+    });
+    if (Array.isArray(files)) {
+      const reservations: Reservation[] = [];
+      for (const dir of files) {
+        if (dir.type === 'dir') {
+          try {
+            const { data: reservationFile } = await octokit.repos.getContent({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              path: `${DATA_PATH}/reservations/${dir.name}/reservation.json`,
+            });
+            if ('content' in reservationFile) {
+              const content = Buffer.from(reservationFile.content, 'base64').toString();
+              reservations.push(JSON.parse(content));
+            }
+          } catch (e) {
+            // reservation.json может отсутствовать — пропускаем
+          }
+        }
+      }
+      return reservations;
     }
-    return []
+    return [];
   } catch (error) {
-    console.error('Error fetching reservations:', error)
-    return []
+    console.error('Error fetching reservations:', error);
+    return [];
   }
 }
 
@@ -388,8 +481,12 @@ export async function loadAllProductsFromGitHub() {
       }
     }
     log('Все товары успешно загружены.')
-  } catch (error) {
-    log('Ошибка при загрузке товаров:', error)
+  } catch (error: any) {
+    if (error.status === 404) {
+      log('Папка товаров ещё не создана — это нормально для пустой базы.')
+    } else {
+      log('Ошибка при загрузке товаров:', error)
+    }
   }
 }
 
@@ -459,8 +556,12 @@ export async function loadAllReservationsFromGitHub() {
       }
     }
     log('Все резервации успешно загружены.')
-  } catch (error) {
-    log('Ошибка при загрузке резерваций:', error)
+  } catch (error: any) {
+    if (error.status === 404) {
+      log('Папка резерваций ещё не создана — это нормально для пустой базы.')
+    } else {
+      log('Ошибка при загрузке резерваций:', error)
+    }
   }
 }
 
