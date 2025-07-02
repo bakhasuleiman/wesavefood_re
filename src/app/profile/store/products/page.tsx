@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
-import { getStoreByUserId, getProductsByStoreId } from '@/lib/github'
-import StoreProductsClient from './StoreProductsClient'
+import { getStoreByUserId } from '@/lib/github'
+import Products from '../Products'
 
 export default async function StoreProductsPage() {
   const user = await requireRole('store')
@@ -18,7 +18,5 @@ export default async function StoreProductsPage() {
     )
   }
   
-  const products = await getProductsByStoreId(store.id)
-  
-  return <StoreProductsClient user={user} store={store} products={products} />
+  return <Products user={user} store={store} />
 } 

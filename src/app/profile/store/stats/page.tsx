@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
 import { getStoreByUserId, getReservations } from '@/lib/github'
-import StoreStatsClient from './StoreStatsClient'
+import Stats from '../Stats'
 
 export default async function StoreStatsPage() {
   const user = await requireRole('store')
@@ -21,5 +21,5 @@ export default async function StoreStatsPage() {
   const allReservations = await getReservations()
   const reservations = allReservations.filter(r => r.storeId === store.id)
   
-  return <StoreStatsClient user={user} store={store} reservations={reservations} />
+  return <Stats user={user} store={store} reservations={reservations} />
 } 
