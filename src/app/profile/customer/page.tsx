@@ -1,8 +1,8 @@
 import { requireRole } from '@/lib/auth'
-import CustomerProfileClient from './CustomerProfileClient'
+import CustomerProfile from './Profile'
 
 export default async function CustomerProfilePage() {
   const user = await requireRole('customer')
   
-  return <CustomerProfileClient user={user} />
+  return <CustomerProfile user={user} />
 } 
