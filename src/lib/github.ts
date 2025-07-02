@@ -154,49 +154,35 @@ export async function getUsers(): Promise<User[]> {
   }
 }
 
+// Универсальная функция для создания папки через .gitkeep
+async function ensureDirExists(path: string) {
+  try {
+    await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path,
+      branch: 'main',
+    })
+  } catch (error: any) {
+    if (error.status === 404) {
+      await octokit.repos.createOrUpdateFileContents({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        path: `${path}/.gitkeep`,
+        message: `init folder ${path}`,
+        content: Buffer.from('').toString('base64'),
+        branch: 'main',
+      })
+    } else {
+      throw error
+    }
+  }
+}
+
 // --- Асинхронное сохранение пользователя в GitHub ---
 export async function saveUserToGitHub(user: User) {
-  // Проверяем, существует ли папка data/users
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/users`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/users/.gitkeep`,
-        message: 'init users folder',
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
-  // Проверяем, существует ли папка data/users/{user.id}
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/users/${user.id}`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/users/${user.id}/.gitkeep`,
-        message: `init user folder for ${user.id}`,
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
-  // Далее стандартное сохранение профиля
+  await ensureDirExists(`${DATA_PATH}/users`)
+  await ensureDirExists(`${DATA_PATH}/users/${user.id}`)
   const path = `${DATA_PATH}/users/${user.id}/profile.json`
   const content = Buffer.from(JSON.stringify(user, null, 2)).toString('base64')
   let sha: string | undefined
@@ -213,6 +199,7 @@ export async function saveUserToGitHub(user: User) {
       message: `Update user ${user.id}`,
       content,
       sha,
+      branch: 'main',
     })
     log(`Пользователь ${user.id} сохранён в ${path}`)
   } catch (error) {
@@ -365,44 +352,8 @@ loadAllStoresFromGitHub()
 
 // --- Асинхронное сохранение магазина в GitHub ---
 export async function saveStoreToGitHub(store: Store) {
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/stores`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/stores/.gitkeep`,
-        message: 'init stores folder',
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/stores/${store.id}`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/stores/${store.id}/.gitkeep`,
-        message: `init store folder for ${store.id}`,
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
+  await ensureDirExists(`${DATA_PATH}/stores`)
+  await ensureDirExists(`${DATA_PATH}/stores/${store.id}`)
   const path = `${DATA_PATH}/stores/${store.id}/profile.json`
   const content = Buffer.from(JSON.stringify(store, null, 2)).toString('base64')
   let sha: string | undefined
@@ -419,6 +370,7 @@ export async function saveStoreToGitHub(store: Store) {
       message: `Update store ${store.id}`,
       content,
       sha,
+      branch: 'main',
     })
     log(`Магазин ${store.id} сохранён в ${path}`)
   } catch (error) {
@@ -553,44 +505,8 @@ loadAllProductsFromGitHub()
 
 // --- Асинхронное сохранение товара в GitHub ---
 export async function saveProductToGitHub(product: Product) {
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/products`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/products/.gitkeep`,
-        message: 'init products folder',
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/products/${product.id}`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/products/${product.id}/.gitkeep`,
-        message: `init product folder for ${product.id}`,
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
+  await ensureDirExists(`${DATA_PATH}/products`)
+  await ensureDirExists(`${DATA_PATH}/products/${product.id}`)
   const path = `${DATA_PATH}/products/${product.id}/product.json`
   const content = Buffer.from(JSON.stringify(product, null, 2)).toString('base64')
   let sha: string | undefined
@@ -607,6 +523,7 @@ export async function saveProductToGitHub(product: Product) {
       message: `Update product ${product.id}`,
       content,
       sha,
+      branch: 'main',
     })
     log(`Товар ${product.id} сохранён в ${path}`)
   } catch (error) {
@@ -666,44 +583,8 @@ loadAllReservationsFromGitHub()
 
 // --- Асинхронное сохранение резервации в GitHub ---
 export async function saveReservationToGitHub(reservation: Reservation) {
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/reservations`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/reservations/.gitkeep`,
-        message: 'init reservations folder',
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
-  try {
-    await octokit.repos.getContent({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
-      path: `${DATA_PATH}/reservations/${reservation.id}`,
-    })
-  } catch (error: any) {
-    if (error.status === 404) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        path: `${DATA_PATH}/reservations/${reservation.id}/.gitkeep`,
-        message: `init reservation folder for ${reservation.id}`,
-        content: Buffer.from('').toString('base64'),
-      })
-    } else {
-      throw error
-    }
-  }
+  await ensureDirExists(`${DATA_PATH}/reservations`)
+  await ensureDirExists(`${DATA_PATH}/reservations/${reservation.id}`)
   const path = `${DATA_PATH}/reservations/${reservation.id}/reservation.json`
   const content = Buffer.from(JSON.stringify(reservation, null, 2)).toString('base64')
   let sha: string | undefined
@@ -720,6 +601,7 @@ export async function saveReservationToGitHub(reservation: Reservation) {
       message: `Update reservation ${reservation.id}`,
       content,
       sha,
+      branch: 'main',
     })
     log(`Резервация ${reservation.id} сохранена в ${path}`)
   } catch (error) {
