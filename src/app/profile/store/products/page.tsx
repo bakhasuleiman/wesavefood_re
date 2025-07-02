@@ -1,10 +1,11 @@
 import { requireRole } from '@/lib/auth'
-import { getStoreByUserId } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 import Products from '../Products'
 
 export default async function StoreProductsPage() {
   const user = await requireRole('store')
-  const store = await getStoreByUserId(user.id)
+  const stores = await getAll('stores')
+  const store = stores.find((s: any) => s.userId === user.id)
   
   if (!store) {
     return (

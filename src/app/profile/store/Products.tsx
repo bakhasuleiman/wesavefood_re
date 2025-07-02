@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getProductsByStoreId, updateProduct } from '@/lib/github'
+import { getAll, update } from '@/lib/github-db'
 import type { User, Store, Product } from '@/lib/github'
 import ProfileLayout from '@/components/profile/ProfileLayout'
 import toast from 'react-hot-toast'
@@ -33,7 +33,8 @@ export default function Products({ user, store }: ProductsProps) {
     const load = async () => {
       setLoading(true)
       try {
-        const prods = await getProductsByStoreId(store.id)
+        const allProducts = await getAll('products')
+        const prods = allProducts.filter((p: any) => p.storeId === store.id)
         setProducts(prods)
       } catch (e) {
         toast.error('Ошибка загрузки товаров')
@@ -63,7 +64,7 @@ export default function Products({ user, store }: ProductsProps) {
         expiryDate: formData.get('expiryDate') as string,
         quantity: parseInt(formData.get('quantity') as string),
       }
-      await updateProduct(product)
+      await update('products', product.id, product)
       setProducts(prev => {
         const exists = prev.find(p => p.id === product.id)
         if (exists) {

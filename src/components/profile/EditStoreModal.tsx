@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { updateStore } from '@/lib/github'
-import type { Store } from '@/lib/github'
+import { update } from '@/lib/github-db'
+import type { Store } from '@/lib/github-db'
 import toast from 'react-hot-toast'
 
 interface EditStoreModalProps {
@@ -24,14 +24,16 @@ export default function EditStoreModal({ store, onClose }: EditStoreModalProps) 
     e.preventDefault()
     setLoading(true)
     try {
-      await updateStore({
-        ...store,
-        ...formData,
+      await update('stores', store.id, {
+        name: formData.name,
+        address: formData.address,
+        phone: formData.phone,
+        description: formData.description,
       })
-      toast.success('Профиль магазина обновлен!')
+      toast.success('Данные магазина обновлены!')
       onClose()
     } catch (error: any) {
-      toast.error('Ошибка при обновлении профиля магазина: ' + (error?.message || ''))
+      toast.error('Ошибка при обновлении магазина: ' + (error?.message || ''))
     } finally {
       setLoading(false)
     }

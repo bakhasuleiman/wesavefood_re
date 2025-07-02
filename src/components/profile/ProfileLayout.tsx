@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import type { User } from '@/lib/github'
+import type { User } from '@/lib/github-db'
 
 interface ProfileLayoutProps {
   user: User

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { updateUser } from '@/lib/github'
-import type { User } from '@/lib/github'
+import { update } from '@/lib/github-db'
+import type { User } from '@/lib/github-db'
 import toast from 'react-hot-toast'
 
 interface EditProfileModalProps {
@@ -21,8 +21,7 @@ export default function EditProfileModal({ user, onClose }: EditProfileModalProp
     e.preventDefault()
     setLoading(true)
     try {
-      await updateUser({
-        ...user,
+      await update('users', user.id, {
         name: formData.name,
         phone: formData.phone,
       })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getProductsByStoreId } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 import type { User, Store, Product, Reservation } from '@/lib/github'
 import ProfileLayout from '@/components/profile/ProfileLayout'
 import toast from 'react-hot-toast'
@@ -21,6 +21,11 @@ interface Stats {
   cancelledReservations: number
   totalRevenue: number
   averageDiscount: number
+}
+
+async function getProductsByStoreId(storeId: string) {
+  const products = await getAll('products')
+  return products.filter((p: any) => p.storeId === storeId)
 }
 
 export default function StatsPage({ user, store, reservations }: StatsProps) {

@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { getProducts, getStores, getUsers } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 
 export default async function Home() {
   // Получаем данные для статистики
   const [products, stores, users] = await Promise.all([
-    getProducts(),
-    getStores(),
-    getUsers(),
+    getAll('products'),
+    getAll('stores'),
+    getAll('users'),
   ])
 
   // Примерные расчёты (адаптируйте под свою бизнес-логику)

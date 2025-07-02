@@ -1,10 +1,11 @@
 import { requireRole } from '@/lib/auth'
-import { getStoreByUserId } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 import Profile from './Profile'
 
 export default async function StoreProfilePage() {
   const user = await requireRole('store')
-  const store = await getStoreByUserId(user.id)
+  const stores = await getAll('stores')
+  const store = stores.find((s: any) => s.userId === user.id)
   
   if (!store) {
     // Если у пользователя нет магазина, перенаправляем на регистрацию магазина

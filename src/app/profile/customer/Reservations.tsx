@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getReservationsByUserId, getProducts, getStores, updateReservation } from '@/lib/github'
+import { getAll, update } from '@/lib/github-db'
 import type { User, Reservation, Product, Store } from '@/lib/github'
 import ProfileLayout from '@/components/profile/ProfileLayout'
 import toast from 'react-hot-toast'
@@ -18,16 +18,17 @@ export default function Reservations({ user }: ReservationsProps) {
     const load = async () => {
       setLoading(true)
       try {
-        const [rawReservations, products, stores] = await Promise.all([
-          getReservationsByUserId(user.id),
-          getProducts(),
-          getStores(),
+        const [allReservations, products, stores] = await Promise.all([
+          getAll('reservations'),
+          getAll('products'),
+          getAll('stores'),
         ])
+        const rawReservations = allReservations.filter((r: any) => r.userId === user.id)
         setReservations(
-          rawReservations.map((r: Reservation) => ({
+          rawReservations.map((r: any) => ({
             ...r,
-            product: products.find((p: Product) => p.id === r.productId)!,
-            store: stores.find((s: Store) => s.id === r.storeId)!,
+            product: products.find((p: any) => p.id === r.productId)!,
+            store: stores.find((s: any) => s.id === r.storeId)!,
           }))
         )
       } catch (e) {
@@ -41,7 +42,7 @@ export default function Reservations({ user }: ReservationsProps) {
 
   const handleCancel = async (reservation: Reservation) => {
     try {
-      await updateReservation({ ...reservation, status: 'cancelled' })
+      await update('reservations', reservation.id, { status: 'cancelled' })
       setReservations(reservations.map(r => r.id === reservation.id ? { ...r, status: 'cancelled' } : r))
       toast.success('Бронирование отменено')
     } catch (e) {

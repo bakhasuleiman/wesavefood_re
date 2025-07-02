@@ -1,12 +1,15 @@
 import { Suspense } from 'react'
-import { getProducts, getStores } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 import CatalogClient from './CatalogClient'
 import YandexMap from '@/components/YandexMap'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogPage() {
-  const [products, stores] = await Promise.all([getProducts(), getStores()])
+  const [products, stores] = await Promise.all([
+    getAll('products'),
+    getAll('stores'),
+  ])
   const yandexStores = stores.map(store => ({
     location: [store.location.lng, store.location.lat] as [number, number],
     name: store.name,

@@ -2,16 +2,17 @@
 
 import { useState } from 'react'
 import EditStoreModal from '@/components/profile/EditStoreModal'
-import type { User, Store } from '@/lib/github'
+import type { User, Store } from '@/lib/github-db'
 import ProfileLayout from '@/components/profile/ProfileLayout'
-import { getStoreByUserId } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 
 interface StoreProfileProps {
   user: User
 }
 
 export default async function StoreProfile({ user }: StoreProfileProps) {
-  const store = await getStoreByUserId(user.id)
+  const stores = await getAll('stores')
+  const store = stores.find((s: any) => s.userId === user.id)
   const [editOpen, setEditOpen] = useState(false)
 
   if (!store) {

@@ -1,11 +1,11 @@
 import dynamic from 'next/dynamic'
-import { getStores, getProducts } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 import ProductList from '@/components/ProductList'
 import YandexMap from '@/components/YandexMap'
 
 export default async function StoresPage() {
-  const stores = await getStores()
-  const products = await getProducts()
+  const stores = await getAll('stores')
+  const products = await getAll('products')
 
   // Формируем массив магазинов для YandexMap
   const yandexStores = stores.map(store => ({

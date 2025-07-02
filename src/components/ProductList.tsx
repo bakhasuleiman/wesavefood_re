@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { Product } from '@/lib/github'
+import type { Product } from '@/lib/github-db'
 
 interface ProductListProps {
   products: Product[]

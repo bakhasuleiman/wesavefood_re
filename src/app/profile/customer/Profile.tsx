@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import EditProfileModal from '@/components/profile/EditProfileModal'
-import type { User } from '@/lib/github'
+import type { User } from '@/lib/github-db'
 import ProfileLayout from '@/components/profile/ProfileLayout'
 
 interface CustomerProfileProps {

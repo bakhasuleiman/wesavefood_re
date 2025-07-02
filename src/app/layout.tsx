@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import Navigation from '@/components/Navigation'
-import { initializeDataFiles } from '@/lib/github'
+import { initializeDbFiles } from '@/lib/github-db'
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'] })
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 // Инициализируем файлы данных при запуске приложения
-initializeDataFiles().catch(console.error)
+initializeDbFiles().catch(console.error)
 
 export default function RootLayout({
   children,

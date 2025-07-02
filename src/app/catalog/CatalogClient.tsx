@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react'
 import { format, isAfter, isBefore, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import type { Product, Store } from '@/lib/github'
+import type { Product, Store } from '@/lib/github-db'
 import ProductList from '@/components/ProductList'
-import { updateProduct } from '@/lib/github'
+import { update } from '@/lib/github-db'
 import toast from 'react-hot-toast'
 
 interface CatalogClientProps {
@@ -64,12 +64,22 @@ export default function CatalogClient({ initialProducts, stores }: CatalogClient
   const handleReserve = async (product: Product) => {
     try {
       const updatedProduct = { ...product, status: 'reserved' as const }
-      await updateProduct(updatedProduct)
+      await update('products', product.id, updatedProduct)
       setProducts(products.map(p => p.id === product.id ? updatedProduct : p))
       toast.success('Товар успешно забронирован!')
     } catch (error) {
       console.error('Error reserving product:', error)
       toast.error('Ошибка при бронировании товара')
+    }
+  }
+
+  const handleUpdate = async (product: Product) => {
+    try {
+      await update('products', product.id, product)
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? product : p)))
+      toast.success('Товар обновлен!')
+    } catch (e) {
+      toast.error('Ошибка при обновлении товара')
     }
   }
 
@@ -129,7 +139,7 @@ export default function CatalogClient({ initialProducts, stores }: CatalogClient
       </div>
 
       {/* Список товаров */}
-      <ProductList products={filteredProducts} onReserve={handleReserve} />
+      <ProductList products={filteredProducts} onReserve={handleReserve} onUpdate={handleUpdate} />
     </div>
   )
 } 
