@@ -6,9 +6,10 @@ import type { Product } from '@/lib/github-db'
 interface ProductListProps {
   products: Product[]
   onReserve?: (product: Product) => void
+  onUpdate?: (product: Product) => void
 }
 
-export default function ProductList({ products, onReserve }: ProductListProps) {
+export default function ProductList({ products, onReserve, onUpdate }: ProductListProps) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
