@@ -26,43 +26,48 @@ function checkTelegramAuth(data: any): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const data = await req.json()
-  if (!checkTelegramAuth(data)) {
-    return NextResponse.json({ message: 'Ошибка валидации Telegram' }, { status: 401 })
-  }
-  // Проверка времени авторизации (например, не старше 2 минут)
-  const now = Math.floor(Date.now() / 1000)
-  if (now - Number(data.auth_date) > 120) {
-    return NextResponse.json({ message: 'Сессия Telegram устарела' }, { status: 401 })
-  }
-  // Проверка роли
-  const role = data.role || 'customer'
-  if (!['customer', 'store'].includes(role)) {
-    return NextResponse.json({ message: 'Некорректная роль пользователя' }, { status: 400 })
-  }
-  // Поиск или создание пользователя
-  let users = await getAll('users')
-  let user = users.find(u => u.id === String(data.id))
-  if (!user) {
-    user = {
-      id: String(data.id),
-      email: data.username ? `${data.username}@telegram` : `tg${data.id}@telegram`,
-      password: '',
-      name: data.first_name + (data.last_name ? ' ' + data.last_name : ''),
-      phone: '',
-      role: role as 'customer' | 'store',
-      createdAt: new Date().toISOString(),
-      photo_url: data.photo_url || '',
+  try {
+    const data = await req.json()
+    if (!checkTelegramAuth(data)) {
+      return NextResponse.json({ message: 'Ошибка валидации Telegram' }, { status: 401 })
     }
-    await update('users', user.id, user)
+    // Проверка времени авторизации (например, не старше 2 минут)
+    const now = Math.floor(Date.now() / 1000)
+    if (now - Number(data.auth_date) > 120) {
+      return NextResponse.json({ message: 'Сессия Telegram устарела' }, { status: 401 })
+    }
+    // Проверка роли
+    const role = data.role || 'customer'
+    if (!['customer', 'store'].includes(role)) {
+      return NextResponse.json({ message: 'Некорректная роль пользователя' }, { status: 400 })
+    }
+    // Поиск или создание пользователя
+    let users = await getAll('users')
+    let user = users.find(u => u.id === String(data.id))
+    if (!user) {
+      user = {
+        id: String(data.id),
+        email: data.username ? `${data.username}@telegram` : `tg${data.id}@telegram`,
+        password: '',
+        name: data.first_name + (data.last_name ? ' ' + data.last_name : ''),
+        phone: '',
+        role: role as 'customer' | 'store',
+        createdAt: new Date().toISOString(),
+        photo_url: data.photo_url || '',
+      }
+      await update('users', user.id, user)
+    }
+    // Устанавливаем httpOnly cookie с telegram_id
+    const response = NextResponse.json({ ok: true })
+    response.cookies.set('telegram_id', String(data.id), {
+      httpOnly: true,
+      path: '/',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 дней
+    })
+    return response
+  } catch (e: any) {
+    console.error('TELEGRAM AUTH ERROR', e)
+    return NextResponse.json({ error: 'Server error', details: String(e?.message || e) }, { status: 500 })
   }
-  // Устанавливаем httpOnly cookie с telegram_id
-  const response = NextResponse.json({ ok: true })
-  response.cookies.set('telegram_id', String(data.id), {
-    httpOnly: true,
-    path: '/',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30, // 30 дней
-  })
-  return response
 } 
