@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getAll, update } from '@/lib/github-db'
-import type { User, Store, Product } from '@/lib/github'
+import type { User, Store, Product } from '@/lib/github-db'
 import ProfileLayout from '@/components/profile/ProfileLayout'
 import toast from 'react-hot-toast'
 

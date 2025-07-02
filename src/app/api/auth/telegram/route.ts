@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUsers, updateUser } from '@/lib/github'
+import { getAll, update } from '@/lib/github-db'
 
 // Не забудьте добавить TELEGRAM_BOT_TOKEN в .env.local
 // @ts-ignore
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Некорректная роль пользователя' }, { status: 400 })
   }
   // Поиск или создание пользователя
-  let users = await getUsers()
+  let users = await getAll('users')
   let user = users.find(u => u.id === String(data.id))
   if (!user) {
     user = {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       photo_url: data.photo_url || '',
     }
-    await updateUser(user)
+    await update('users', user.id, user)
   }
   // Устанавливаем httpOnly cookie с telegram_id
   const response = NextResponse.json({ ok: true })

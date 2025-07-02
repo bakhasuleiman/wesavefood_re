@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getUsers, getUserById } from './github'
+import { getAll } from './github-db'
 
 export async function getCurrentUser() {
   const cookieStore = await cookies()
@@ -11,7 +11,8 @@ export async function getCurrentUser() {
   }
   
   try {
-    const user = await getUserById(telegramId)
+    const users = await getAll('users')
+    const user = users.find(u => u.id === telegramId)
     return user
   } catch (error) {
     console.error('Error getting current user:', error)

@@ -1,10 +1,10 @@
 import { requireRole } from '@/lib/auth'
-import { getStoreByUserId, getReservations } from '@/lib/github'
+import { getAll } from '@/lib/github-db'
 import Stats from '../Stats'
 
 export default async function StoreStatsPage() {
   const user = await requireRole('store')
-  const store = await getStoreByUserId(user.id)
+  const store = await getAll('stores').then(stores => stores.find(s => s.userId === user.id))
   
   if (!store) {
     return (
@@ -18,7 +18,7 @@ export default async function StoreStatsPage() {
     )
   }
   
-  const allReservations = await getReservations()
+  const allReservations = await getAll('reservations')
   const reservations = allReservations.filter(r => r.storeId === store.id)
   
   return <Stats user={user} store={store} reservations={reservations} />
