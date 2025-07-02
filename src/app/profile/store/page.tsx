@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
 import { getStoreByUserId } from '@/lib/github'
-import StoreProfileClient from './StoreProfileClient'
+import Profile from './Profile'
 
 export default async function StoreProfilePage() {
   const user = await requireRole('store')
@@ -19,5 +19,5 @@ export default async function StoreProfilePage() {
     )
   }
   
-  return <StoreProfileClient user={user} store={store} />
+  return <Profile user={user} />
 } 
