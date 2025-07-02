@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAll, update } from '@/lib/github-db'
+import { getAll, update, create } from '@/lib/github-db'
 
 // Не забудьте добавить TELEGRAM_BOT_TOKEN в .env.local
 // @ts-ignore
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         createdAt: new Date().toISOString(),
         photo_url: data.photo_url || '',
       }
-      await update('users', user.id, user)
+      await create('users', user)
     }
     // Устанавливаем httpOnly cookie с telegram_id
     const response = NextResponse.json({ ok: true })
