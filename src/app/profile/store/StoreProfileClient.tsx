@@ -6,14 +6,7 @@ import toast from 'react-hot-toast'
 import { updateStore } from '@/lib/github'
 import type { User, Store } from '@/lib/github'
 import ProfileLayout from '@/components/profile/ProfileLayout'
-import dynamic from 'next/dynamic'
-
-const Map = dynamic(() => import('@/components/Map'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[300px] rounded-lg bg-secondary animate-pulse" />
-  ),
-})
+import YandexMap from '@/components/YandexMap'
 
 interface StoreProfileClientProps {
   user: User
@@ -161,18 +154,17 @@ export default function StoreProfileClient({ user, store }: StoreProfileClientPr
                 </button>
               </div>
               <div className="h-[300px] rounded-lg overflow-hidden">
-                <Map
+                <YandexMap
                   stores={[
                     {
-                      id: store.id,
-                      userId: store.userId,
+                      location: [formData.location.lng, formData.location.lat],
                       name: formData.name,
                       address: formData.address,
-                      location: formData.location,
-                      description: formData.description,
-                      phone: formData.phone,
                     },
                   ]}
+                  onStoreSelect={(store) => {
+                    // Можно реализовать дополнительную логику при выборе магазина
+                  }}
                 />
               </div>
             </div>
@@ -210,7 +202,15 @@ export default function StoreProfileClient({ user, store }: StoreProfileClientPr
             <div>
               <div className="text-sm text-text-secondary mb-2">Местоположение</div>
               <div className="h-[300px] rounded-lg overflow-hidden">
-                <Map stores={[store]} />
+                <YandexMap
+                  stores={[
+                    {
+                      location: [store.location.lng, store.location.lat],
+                      name: store.name,
+                      address: store.address,
+                    },
+                  ]}
+                />
               </div>
             </div>
           </div>
